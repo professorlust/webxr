@@ -485,9 +485,9 @@ vrSession.addEventListener('resetpose', vrSessionEvent => {
 
 ### Handling Transparent Displays
 
-The majority of current VR devices are opaque and do not enable the user to see their surrounding environment while using it. However some devices, like Microsoft's HoloLens, utilize transparent displays in the service of AR features. While the initial version of the WebVR API does not attempt to provide access to AR-centric features it does communicate whether or no the device display is see-through with the session's `isTransparent` attribute.
+The majority of current VR devices are opaque and do not enable the user to see their surrounding environment while using it. However some devices, like Microsoft's HoloLens, utilize transparent displays in the service of AR features. While the initial version of the WebVR API does not attempt to provide access to AR-centric features it does communicate whether or not the device display is see-through with the session's `isTransparent` attribute.
 
-WebVR content may want to refrain from drawing a background over the full frame in cases where the display is transparent, to allow the virtual content to appear as if it's floating in the real environment. (Note that this version of the WebVR API provides no mechanism for aligning or occluding content againts the environment.) To do so rendering of virtual backgrounds should be skipped when the display indicates it is transparent.
+WebVR content may want to refrain from drawing a background over the full frame in cases where the display is transparent, to allow the virtual content to appear as if it's floating in the real environment. (Note that this version of the WebVR API provides no mechanism for aligning or occluding content againts the environment.) To do so, skip rendering virtual backgrounds when the display indicates it is transparent.
 
 ```js
 function onDrawFrame(vrFrame) {
