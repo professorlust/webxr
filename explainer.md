@@ -486,22 +486,18 @@ vrSession.addEventListener('resetpose', vrSessionEvent => {
 
 ### Page navigation
 
-WebVR applications can, like any web page, link to other pages. In the context of a VR scene this is handled by setting `window.location` to the desired URL when the user performs some action. If the page being linked to is not VR-capable the user will either have to remove the VR device to view it (which the UA should explicitly instruct them to do) or the page could be shown as a 2D page in a VR browser.
+WebVR applications can, like any web page, link to other pages. In the context of an exclusive `VRSession` this is handled by setting `window.location` to the desired URL when the user performs some action. If the page being linked to is not VR-capable the user will either have to remove the VR device to view it (which the UA should explicitly instruct them to do) or the page could be shown as a 2D page in a VR browser.
 
-If the page being navigated to is VR capable, however, it's frequently desirable to allow the user to immediately begin using a VR session for that page as well, so that the user feels as though they are navigating through a single continuous VR experience. To achieve this the page can handle the `navigate` event, fired on the `navigator.vr` object. This event provides a `VRSession` for the `VRDevice` that the previous page was presenting to.
+If the page being navigated to is VR capable, however, it's frequently desirable to allow the user to immediately create an exclusive `VRSession` for that page as well, so that the user feels as though they are navigating through a single continuous VR experience. To achieve this the page can query `navigator.vr.getNavigationDevice()` which returns a promise. If the page was navigated to from an exclusive `VRSession` the promise will resolve with the `VRDevice` that the previous session was created with. If not, the promise immediately rejects.
 
-The `VRDevice` and `VRSession` must not retain any state set by the previous page, and need not make any guarantees about consistency of pose data between pages. They should maintain the same general implementation between pages for basic usage consistency. For example: The user agent should not switch users from the Oculus SDK to OpenVR between pages, or from Daydream to Cardboard, even though in both cases the users device could technically be used with either.
-
-To indicate to indicate that you wish to continue presenting VR content on this page the handler must call `event.preventDefault()`.
+If `getNavigationDevice()` resolves to a `VRDevice` the page is allowed to create an exclusive session with the same device in the promise resolution callback without being subject to the user gesture requirement. This is only allowed once, and subsequent exclusive `VRSession`s must be requested within a user gesture. Additionally, the session must be requested within a User Agent-defined period after the page load or the ability to create an exclusive session without a user gesture expires.
 
 ```js
-navigator.vr.addEventListener('navigate', vrSessionEvent => {
-  vrSessionEvent.preventDefault();
-  vrSession = vrSessionEvent.session;
-  vrDevice = vrSession.device;
-
-  // Ensure content is loaded and begin drawing.
-  onDrawFrame();
+// Check to see if the page was navigated to from an exclusive session, and if
+// so begin our own to provide a more continuous VR experience to the user.
+navigator.vr.getNavigationDevice().then(device => {
+  vrDevice = device;
+  BeginVRSession();
 });
 ```
 
@@ -547,9 +543,10 @@ partial interface Navigator {
 interface VR : EventTarget {
   attribute EventHandler ondeviceconnect;
   attribute EventHandler ondevicedisconnect;
-  attribute EventHandler onnavigate;
 
   Promise<sequence<VRDevice>> getDevices();
+
+  Promise<VRDevice> getNavigationDevice();
 };
 
 //
