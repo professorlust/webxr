@@ -75,10 +75,10 @@ While `supportsSession()` and `requestSession()` would continue to be used, they
   * See [Should `supportsSession()` Require User Activation?](#should-supportssession-require-user-activation)
 * Be normatively **encouraged** to not (`SHOULD NOT`/`NOT RECOMMENDED`) require user interaction (i.e., responding to browser UI) to complete (fulfill or reject the promise).
   * In other words, there should be no prompts or permission requests.
-  * This is critical to allow applications to display appropriate UI on page load without bothering the user. However, implementations MAY choose to require interaction if they feel it is necessary in certain cases. See [Should supportsSession() Normatively Prohibit Requiring User Interaction?](#should-supportssession-normatively-prohibit-requiring-user-interaction)
+  * This is critical to allow applications to display appropriate UI on page load without bothering the user. However, implementations MAY choose to require interaction if they feel it is necessary in certain cases. See [Should `supportsSession()` Normatively Prohibit Requiring User Interaction?](#should-supportssession-normatively-prohibit-requiring-user-interaction)
 * Be normatively **encouraged** to not (`SHOULD NOT`/`NOT RECOMMENDED`) spin up the runtime. 
   * This is especially important for current desktop runtimes, which often display store UI when this happens.
-* Resolve (success) only if the user agent thinks there is a good chance the session can support the specified coarse capabilities and reject otherwise. See [What Level of Confidence Should supportsSession() provide?](#what-level-of-confidence-should-supportssession-provide)
+* Resolve (success) only if the user agent thinks there is a good chance the session can support the specified coarse capabilities and reject otherwise. See [What Level of Confidence Should `supportsSession()` provide?](#what-level-of-confidence-should-supportssession-provide)
 
 `requestSession()` would:
 * Be required/allowed (depending on the options) to require user interaction, such as prompts or permissions.
@@ -94,7 +94,7 @@ When calling `requestSession()`, the application is effectively saying "I would 
 As mentioned above, the options accepted by `supportsSession()` should be a **subset** of those accepted by `requestSession()`. For developer ergonomics, we should reuse the type passed to the former in the latter. Probably the simplest way to do that is to use the same first parameter for both methods and add a second parameter to `requestSession()`. Another option that might be simpler for developers to use would be to have `requestSession()` accept an object that inherits from the one accepted by `supportsSession()`. However, this might ultimately be confusing and lead to developers passing the same values to both and expecting `supportsSession()` to consider the additional options.
 
 For example (name bikeshedding aside):
-```
+```javascript
 supportsSession(XRSessionRequiredOptions requiredOptions);
 requestSession(XRSessionRequiredOptions requiredOptions, XRSessionConfiguration requestedConfiguration);
 ```
@@ -162,7 +162,7 @@ One issue if the fallbacks is that the user activation may have been consumed by
 ## Example
 The following example is for illustrative purposes only. The option names and values are not concrete parts of this proposal, and the values used in various configurations may not be realistic. This example is also not robust against inaccurate `supportsSession()` responses, denied permissions, etc.
 
-```
+```javascript
 // Prefer immersive AR.
 let sessionRequirements = {mode: 'immersive', world-integration: true};
 let sessionConfig = { foveated: true, planes: true, pixelData: true };
