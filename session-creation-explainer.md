@@ -5,7 +5,7 @@ One of the needs (so-called "breaking changes") we identified when renaming the 
 
 The following proposal is based on exploration of these topics. While AR is a test case for the API shape and is used in examples, the intent is **not** to define any specific values outside the scope of WebXR Device API 1.0. Such values would be proposed alongside their respective features definitions but within the proposed framework.
 # Background
-## Querying
+## Querying Client Support
 ### Author Interests
 Authors want to:
 #### Provide "Enter VR" Buttons Only When the Client Supports It
@@ -56,7 +56,7 @@ Since real world understanding and camera/transparency will not be available whe
 
 Applications should be able to determine whether they need to wait for a user activation, just as they do for `video.play()`. However, even if the application has a user activation and can create an AR session, it may wish to wait for the user to click a button since requesting an AR session is likely to prompt the user for a permission. (**TODO**: File a spec issue.)
 # Proposal: Separate capability detection from session configuration
-This section contains a proposal that addresses many of the issues above. It is intended to be a baseline for discussion and hopefully something we can build on. There are some [Open Questions & Issues](#open-questions--issues) and there are [alternatives and extensions](#alternatives) that have their own advantages and disadvantages.
+This section contains a proposal that addresses many of the issues above. It is intended to be a baseline for discussion and hopefully something we can build on. There are some [Open Questions & Issues](#open-questions--issues) as well as [alternatives and extensions](#alternatives) that have their own advantages and disadvantages.
 ## Overview
 This solution allows coarse capability detection while enabling finer-grained session and platform device configuration. The former are session **requirements** while the latter are **optional** requests. In other words, a query or request for the coarse capabilities will fail if they cannot be provided while the configuration options are wants or hints. Below, these are referred to below as **session requirement** and **session configuration options**, respectively.
 
@@ -101,8 +101,13 @@ requestSession(XRSessionRequiredOptions requiredOptions, XRSessionConfiguration 
 
 We need to decide on whether the parameter types should be [Interfaces or Dictionaries](#extensibility-interface-vs-dictionary)
 ## Session Options
-Individual options fall into two categories:
-1. They represent - and enable selection of - distinct hardware modes, such as immersive ("presentation") vs. inline (i.e., "magic window") .
+In general, flags or values that may have one or more of the following effects on some clients should be session options:
+* Affect which physical device and/or runtime is used for a session
+* Affect how the physical device and/or runtime is configured and is something that may not be configurable during session use
+* Affect whether/which user permissions are required and/or prompts are displayed
+
+Individual session options fall into two categories:
+1. They represent - and enable selection of - distinct hardware modes, such as immersive (formerly "presentation") vs. inline (i.e., "magic window") .
 2. They represent additive features, such as real world integration and understanding capabilities.
 
 The second category only allows applications to specify additional features they would like to use. Applications cannot require that an additive option is _not_ present or enabled. For example, a created session may have AR properties and capabilities even if AR wasn't explicitly requested. In particular, applications cannot say they do _not_ want a translucent display, which is often associated with AR HMDs. (Applications should ensure they are render appropriately  on such displays by checking the `XREnvironmentBlendMode`.)
@@ -112,6 +117,15 @@ The other side of this contract is that implementations `SHOULD NOT` prompt the 
 When specifying such options, care should be taken to ensure that the default value and implementation specification will not result in unexpectedly breaking applications that don’t request the option. For example, implementations should not enable foveated rendering or performance optimizations that may negatively affect the correctness of an application unless the application explicitly opts-in to that behavior.
 
 While we could design the API to allow such exclusion, it complicates the API (i.e., adding tri-state values) and could encourage development patterns that unnecessarily exclude certain classes of devices.
+### Capability & Feature Detection
+With this proposal, there are three levels of capability/feature detection:
+1. **Session requirement(s)**
+1. **Session configuration options**
+1. Standard feature detection
+
+**TODO:** Expand on the first two, including the use of an interface and `XRSession` property for the first two.
+
+Even if a requirement and option are successfully met or a feature does not require a session option, it may be possible that an API or individual feature is not (currently) available. Thus, applications may need to use standard feature detection mechanisms after the session is created. Such mechanisms should be clearly specified in the specification for the corresponding feature.
 ### Possible Session Options
 The options defined in the first version of WebXR Device API (this repo) will continue to be limited, but we can think ahead to how the options might be used to test this proposal as well as make progress for other efforts, such as [Hit-test](https://github.com/immersive-web/hit-test).
 #### Immersive vs. Not
@@ -164,7 +178,7 @@ The following example is for illustrative purposes only. The option names and va
 
 ```javascript
 // Prefer immersive AR.
-let sessionRequirements = {mode: 'immersive', world-integration: true};
+let sessionRequirements = {immersive: true, worldIntegration: true};
 let sessionConfig = { foveated: true, planes: true, pixelData: true };
 xrDevice.supportsSession(sessionRequirements).then(
   function() {
@@ -173,7 +187,7 @@ xrDevice.supportsSession(sessionRequirements).then(
 ).catch(
   function(error) {
     // The first fallback is "inline AR" (aka smartphone AR).
-    sessionRequirements = {mode: 'inline', world-integration: true};
+    sessionRequirements = {mode: 'inline', worldIntegration: true};
     sessionConfig = { planes: true, pixelData: true };
     xrDevice.supportsSession(sessionRequirements).then(
       function() {
@@ -184,7 +198,7 @@ xrDevice.supportsSession(sessionRequirements).then(
 ).catch(
   function(error) {
     // There is a limited VR fallback, so try immersive VR.
-    sessionRequirements = {mode: 'immersive', world-integration: false};
+    sessionRequirements = {immersive: true, worldIntegration: false};
     sessionConfig = { foveated: true };
     xrDevice.supportsSession(sessionRequirements).then(
       function() {
@@ -195,7 +209,7 @@ xrDevice.supportsSession(sessionRequirements).then(
 ).catch(
   function(error) {
     // Finally, try "magic window" VR.
-    sessionRequirements = {mode: 'inline', world-integration: false};
+    sessionRequirements = {mode: 'inline', worldIntegration: false};
     sessionConfig = { };    xrDevice.supportsSession(sessionRequirements).then(
       function() {
         // Request VR "magic window" session, which does not
@@ -345,8 +359,9 @@ This last three steps can only fail if something goes wrong with the runtime or 
 The following is an (incomplete) list of capabilities that applications might want to request or detect. The purpose is only to stimulate thought and discussion. Some of these may be candidates to be exposed as options while others may not. It seems very unlikely that any of these would become **session requirements**.
 
 **General:**
-* 3 vs. 6 DoF headset
-* 0 vs. 3 vs. 6 DoF magic "window"
+* Headset: 3 vs. 6 DoF
+  * This may be useful, for example, to determine whether to use cameras to get 6-DoF vs. a lower-power sensor-based 3-DoF implementation.
+* Magic "window": 0 vs. 3 vs. 6 DoF
 * Opacity details
 * Foveated rendering
 * Controllers
